@@ -242,18 +242,18 @@ export function CompaniesHeader({ editCompany, showEditModal, onEditCompany, onC
         )}
         {/* Export */}
          <Button
-          leadingIcon={<img src="\icons\File.svg" alt="export-file" className="w-[17px] h-4 " />}
           onClick={handleExportCompanies}
         >
+          <img src="/icons/File.svg" alt="export-file" className="w-[17px] h-4" />
           Export
         </Button>
 
         {/* Import */}
         <div className="relative">
           <Button
-            leadingIcon={<img src="\icons\upload.svg" alt="upload" className="w-[17px] h-4 " />}
             onClick={handleImportCompanies}
           >
+            <img src="/icons/upload.svg" alt="upload" className="w-[17px] h-4" />
             Import
           </Button>
         </div>

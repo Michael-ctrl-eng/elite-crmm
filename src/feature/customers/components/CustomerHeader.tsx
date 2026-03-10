@@ -239,18 +239,18 @@ export function CustomerHeader({ editCustomer, showEditModal, onEditCustomer, on
         )}
         {/* Export */}
         <Button
-          leadingIcon={<img src="\icons\File.svg" alt="export-file" className="w-[17px] h-4 " />}
           onClick={handleExportCustomers}
         >
+          <img src="/icons/File.svg" alt="export-file" className="w-[17px] h-4" />
           Export
         </Button>
 
         {/* Import */}
         <div className="relative">
           <Button
-            leadingIcon={<img src="\icons\upload.svg" alt="upload" className="w-[17px] h-4 " />}
             onClick={handleImportCustomers}
           >
+            <img src="/icons/upload.svg" alt="upload" className="w-[17px] h-4" />
             Import
           </Button>
         </div>

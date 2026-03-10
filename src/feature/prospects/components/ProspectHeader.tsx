@@ -234,17 +234,17 @@ export function ProspectHeader({ selectedProspects = [], selectedProspectRows = 
         )}
         {/* Export */}
          <Button
-          leadingIcon={<img src="\icons\File.svg" alt="export-file" className="w-[17px] h-4 "/>}
           onClick={handleExportProspects}
            >
+          <img src="/icons/File.svg" alt="export-file" className="w-[17px] h-4"/>
           Export
         </Button>
 
         {/* Import */}
         <Button 
-         leadingIcon={<img src="\icons\upload.svg" alt="upload" className="w-[17px] h-4 "/>}
          onClick={handleImportProspects}
         >
+         <img src="/icons/upload.svg" alt="upload" className="w-[17px] h-4"/>
          Import
         </Button>
 

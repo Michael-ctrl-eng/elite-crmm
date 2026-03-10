@@ -60,6 +60,7 @@ export async function POST(req: Request) {
             name: name ?? null,
             password: dummyPassword,
             status: 'Invite' as any,
+            tenantId: session.user.tenantId,
           }
         })
       },
@@ -68,6 +69,7 @@ export async function POST(req: Request) {
         entityId: "",
         action: ActivityAction.Create,
         userId: session.user.id,
+        tenantId: session.user.tenantId,
         getCurrentData: async (result: any) => result,
         metadata: { reason: "User invited" },
       }
@@ -152,6 +154,7 @@ export async function DELETE(req: Request) {
         entityId: userIds.join(','),
         action: ActivityAction.Delete,
         userId: session.user.id,
+        tenantId: session.user.tenantId,
         getPreviousData: async () => previousUsers,
         getCurrentData: async (result: any) => {
           return await prisma.user.findMany({

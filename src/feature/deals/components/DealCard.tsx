@@ -68,7 +68,7 @@ export function DealCard({ deal, className }: DealCardProps) {
         {/* Stage badge */}
         <div className="mb-2">
           <span className={cn("inline-flex items-center rounded-md  py-0.5 text-xs font-medium", badgeClass)}>
-            <Badge variant={deal.stage}>{labelForStage(deal.stage)}</Badge>
+            <Badge variant="outline">{labelForStage(deal.stage)}</Badge>
           </span>
         </div>
 

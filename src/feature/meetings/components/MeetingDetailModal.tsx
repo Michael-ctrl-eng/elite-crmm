@@ -142,7 +142,12 @@ export const MeetingDetailModal: React.FC<MeetingDetailModalProps> = ({
       label: "Tags",
       value: (
         <div className="flex flex-wrap gap-1">
-          {(Array.isArray(meeting.tags) ? meeting.tags : meeting.tags.split(',').map(t => t.trim())).map((tag, index) => (
+          {((tags: string | string[]) => {
+            if (typeof tags === 'string') {
+              return tags.split(',').map(t => t.trim()).filter(Boolean);
+            }
+            return Array.isArray(tags) ? tags : [];
+          })(meeting.tags).map((tag, index) => (
             <span key={index} className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
               <Tag className="w-3 h-3 mr-1" />
               {tag}

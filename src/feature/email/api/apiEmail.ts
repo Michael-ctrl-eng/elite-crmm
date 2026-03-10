@@ -87,6 +87,7 @@ export async function POST(req: Request) {
           username,
           password,
           userId: session.user.id,
+          tenantId: session.user.tenantId,
         }
       });
     }

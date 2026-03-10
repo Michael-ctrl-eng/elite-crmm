@@ -1,4 +1,0 @@
--- AlterTable
-ALTER TABLE "Meeting" ALTER COLUMN "startDate" DROP NOT NULL,
-ALTER COLUMN "startTime" DROP NOT NULL,
-ALTER COLUMN "endTime" DROP NOT NULL;

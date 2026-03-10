@@ -77,7 +77,7 @@ export default function DealDetail({
   const details = [
     { label: 'Company', value: getCompanyName(deal.company) },
     { label: 'Contact', value: getContactName(deal.contact) },
-    { label: 'Stage', value: (<Badge variant={deal.stage}>{deal.stage}</Badge>) },
+    { label: 'Stage', value: (<Badge variant="outline">{deal.stage}</Badge>) },
     { label: 'Amount', value: `${getCurrencySymbol((deal as any).currency)}${deal.amount.toLocaleString()}` },
     {
       label: 'Owner',
