@@ -1,0 +1,1 @@
+export { GET, POST } from "@/feature/deals/api/apiDeals";

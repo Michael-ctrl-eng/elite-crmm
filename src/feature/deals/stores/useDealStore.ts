@@ -1,0 +1,487 @@
+import { create } from "zustand";
+import toast from "react-hot-toast";
+import { Deal } from "../types";
+import { exportDealsToExcel, exportDealsWithColumns, exportSingleDealToExcel } from "../libs/excelExport";
+import { importDealsFromExcel, generateDealImportTemplate } from "../libs/excelImport";
+import { FilterData } from "../libs/filterData";
+import { useUserStore } from "../../user/store/userStore";
+
+
+interface DealStore {
+  deals: Deal[];
+  filteredDeals: Deal[];
+  loading: boolean;
+  error: string | null;
+  filters: FilterData;
+  closedDateFilter: Date | null;
+  searchTerm: string;
+
+  fetchDeals: (ownerId?: string) => Promise<void>;
+  setSearchTerm: (search: string) => void;
+  setFilters: (filters: FilterData) => void;
+  applyFilters: () => Promise<void>;
+  resetFilters: () => Promise<void>;
+  setClosedDateFilter: (date: Date | null) => void;
+  generateOwnerOptions: () => any[];
+  initializeOwnerOptions: () => void;
+  addDeal: (deal: Omit<Deal, "id" | "ownerId" | "createdAt">) => Promise<void>;
+  updateDeal: (id: string, deal: Partial<Deal>) => Promise<void>;
+  deleteDeal: (id: string) => Promise<void>;
+  exportAllDeals: (filename?: string) => void;
+  exportSelectedDeals: (dealIds: string[], filename?: string) => void;
+  exportSingleDeal: (dealId: string, filename?: string) => void;
+  exportDealsWithColumns: (columns: (keyof Deal)[], filename?: string) => void;
+  importDealsFromExcel: (file: File) => Promise<void>;
+  downloadImportTemplate: (filename?: string) => void;
+}
+
+export const useDealStore = create<DealStore>((set, get) => ({
+  deals: [],
+  filteredDeals: [],
+  loading: false,
+  error: null,
+  filters: {
+    status: [
+      { id: "all", label: "All Status", checked: true },
+      { id: "new", label: "New", checked: false },
+      { id: "contacted", label: "Contacted", checked: false },
+      { id: "proposal", label: "Proposal Sent", checked: false },
+      { id: "negotiation", label: "Negotiation", checked: false },
+      { id: "won", label: "Won", checked: false },
+      { id: "lost", label: "Lost", checked: false },
+    ],
+    owner: [],
+    tags: [
+      { id: "all", label: "All Tags", checked: true },
+      { id: "weblead", label: "Web Lead", checked: false },
+      { id: "referral", label: "Referral", checked: false },
+      { id: "vip", label: "VIP", checked: false },
+      { id: "construction", label: "Construction", checked: false },
+      { id: "architecture", label: "Architecture", checked: false },
+    ],
+  },
+  closedDateFilter: null,
+  searchTerm: "",
+
+  // Build owner filter options
+  generateOwnerOptions: () => {
+    const { users } = useUserStore.getState();
+    const userOptions = users.slice(0, 5).map((user) => ({
+      id: user.id,
+      label: user.name || user.email,
+      checked: false,
+    }));
+    return [
+      { id: "all", label: "All Owner", checked: true },
+      // { id: "me", label: "Me", checked: false },
+      ...userOptions,
+    ];
+  },
+
+  initializeOwnerOptions: () => {
+    const ownerOptions = get().generateOwnerOptions();
+    set((state) => ({
+      filters: { ...state.filters, owner: ownerOptions },
+    }));
+  },
+
+  // Filters management
+  setFilters: (newFilters: FilterData) => {
+    set({ filters: newFilters });
+  },
+
+  setClosedDateFilter: (date: Date | null) => {
+    set({ closedDateFilter: date });
+    get().applyFilters();
+  },
+
+  applyFilters: async () => {
+    const { filters, closedDateFilter, searchTerm } = get();
+    
+    try {
+      set({ loading: true });
+      
+      // Build query parameters
+      const params = new URLSearchParams();
+      
+      // Search term
+      if (searchTerm.trim()) {
+        params.append('search', searchTerm.trim());
+      }
+      
+      // Status filter -> map to stage field
+      const activeStatus = filters.status.filter((s: any) => s.checked && s.id !== "all");
+      if (activeStatus.length > 0) {
+        const map: Record<string, string> = {
+          new: 'New',
+          contacted: 'Contacted',
+          proposal: 'Proposal',
+          negotiation: 'Negotiation',
+          won: 'Won',
+          lost: 'Lost',
+        };
+        const stages = activeStatus.map((f: any) => map[f.id]).filter(Boolean);
+        if (stages.length > 0) {
+          params.append('stages', stages.join(','));
+        }
+      }
+
+      // Owner filter
+      const activeOwners = filters.owner.filter((o: any) => o.checked && o.id !== "all");
+      if (activeOwners.length > 0) {
+        const ownerIds = activeOwners
+          .map((f: any) => {
+            if (f.id === "me") {
+              const currentUserId = useUserStore.getState().getCurrentUserId();
+              return currentUserId;
+            }
+            return f.id;
+          })
+          .filter(Boolean);
+        if (ownerIds.length > 0) {
+          params.append('owners', ownerIds.join(','));
+        }
+      }
+
+      // Tags filter
+      const activeTags = filters.tags.filter((t: any) => t.checked && t.id !== "all");
+      if (activeTags.length > 0) {
+        const tags = activeTags.map((f: any) => f.label).filter(Boolean);
+        if (tags.length > 0) {
+          params.append('tags', tags.join(',').toLowerCase());
+        }
+      }
+
+      // Closed date filter
+      if (closedDateFilter) {
+        const date = new Date(closedDateFilter);
+        date.setHours(0, 0, 0, 0);
+
+        // Convert to ISO string without shifting to UTC
+        const localISO = new Date(
+          date.getTime() - date.getTimezoneOffset() * 60000
+        ).toISOString();
+        params.append('closeDateFrom', localISO);
+      }
+
+      // Make API call with filters
+      const queryString = params.toString();
+      const url = queryString ? `/api/admin/deals?${queryString}` : '/api/admin/deals';
+      const res = await fetch(url);
+      
+      if (!res.ok) throw new Error("Failed to fetch filtered deals");
+
+      const data: any[] = await res.json();
+      const cleanData: Deal[] = Array.isArray(data)
+        ? data.map((d: any) => ({
+            ...d,
+            owner: typeof d.owner === 'object' && d.owner ? (d.owner.name || d.owner.email || '')
+                  : (typeof d.owner === 'string' ? d.owner : ''),
+            ownerId: typeof d.owner === 'object' && d.owner ? d.owner.id : (d.ownerId ?? undefined),
+          }))
+        : [];
+      
+      set({ deals: cleanData, filteredDeals: cleanData, loading: false });
+      
+    } catch (err: any) {
+      console.error("applyFilters error:", err);
+      toast.error("Failed to apply filters");
+      set({ error: err.message, loading: false });
+    }
+  },
+
+  resetFilters: async () => {
+    const initial = {
+      status: [
+        { id: "all", label: "All Status", checked: true },
+        { id: "new", label: "New", checked: false },
+        { id: "contacted", label: "Contacted", checked: false },
+        { id: "proposal", label: "Proposal Sent", checked: false },
+        { id: "negotiation", label: "Negotiation", checked: false },
+        { id: "won", label: "Won", checked: false },
+        { id: "lost", label: "Lost", checked: false },
+      ],
+      owner: get().generateOwnerOptions(),
+      tags: [
+        { id: "all", label: "All Tags", checked: true },
+        { id: "weblead", label: "Web Lead", checked: false },
+        { id: "referral", label: "Referral", checked: false },
+        { id: "vip", label: "VIP", checked: false },
+        { id: "construction", label: "Construction", checked: false },
+        { id: "architecture", label: "Architecture", checked: false },
+      ],
+    };
+    set({ filters: initial, closedDateFilter: null, searchTerm: "" });
+    // Fetch all deals without filters
+    await get().fetchDeals();
+  },
+
+  // 🔧 Test function to set current user (for debugging)
+  setCurrentUserForTesting: (userId: string) => {
+    const { users } = useUserStore.getState();
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      useUserStore.getState().setCurrentUser(user);
+    } else {
+      console.log('User not found:', userId);
+    }
+  },
+
+  setSearchTerm: (search: string) => {
+    set({ searchTerm: search });
+    get().applyFilters();
+  },
+
+  fetchDeals: async (ownerId?: string) => {
+    set({ loading: true });
+    try {
+      const query = ownerId ? `?ownerId=${ownerId}` : "";
+      const res = await fetch(`/api/admin/deals${query}`);
+      if (!res.ok) throw new Error("Failed to fetch deals");
+
+      const data: any[] = await res.json();
+      const cleanData: Deal[] = Array.isArray(data)
+        ? data.map((d: any) => ({
+            ...d,
+            owner: typeof d.owner === 'object' && d.owner ? (d.owner.name || d.owner.email || '')
+                  : (typeof d.owner === 'string' ? d.owner : ''),
+            ownerId: typeof d.owner === 'object' && d.owner ? d.owner.id : (d.ownerId ?? undefined),
+          }))
+        : [];
+      set({ deals: cleanData, filteredDeals: cleanData, loading: false });
+
+      // Initialize current user if not set and we have users data
+      const { users, currentUser } = useUserStore.getState();
+
+      if (users.length === 0) {
+        // Fetch users first if not loaded
+        await useUserStore.getState().fetchUsers();
+      }
+
+      const { users: updatedUsers, currentUser: updatedCurrentUser } = useUserStore.getState();
+
+      if (updatedUsers.length > 0) {
+        // Initialize current user from localStorage or API if not already set
+        if (!updatedCurrentUser) {
+          await useUserStore.getState().initializeCurrentUser();
+        }
+      }
+    } catch (err: any) {
+      console.error("fetchDeals error:", err);
+      toast.error("Failed to load deals");
+      set({ error: err.message, loading: false });
+    }
+  },
+
+  // ➕ Add a new deal
+  addDeal: async (deal) => {
+    try {
+      const res = await fetch(`/api/admin/deals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(deal),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to create deal");
+      }
+
+      const created: any = await res.json();
+      const normalized: Deal = {
+        ...created,
+        owner: typeof created.owner === 'object' && created.owner
+          ? (created.owner.name || created.owner.email || '')
+          : (typeof created.owner === 'string' ? created.owner : (deal.owner || '')),
+        ownerId: typeof created.owner === 'object' && created.owner
+          ? created.owner.id
+          : created.ownerId,
+      };
+      set({ deals: [ ...get().deals, normalized ] });
+      get().applyFilters();
+      toast.success("Deal created successfully!");
+    } catch (err: any) {
+      console.error("addDeal error:", err);
+      toast.error(err.message);
+      set({ error: err.message });
+    }
+  },
+
+  // ✏️ Update a deal
+  updateDeal: async (id, deal) => {
+    try {
+      const res = await fetch(`/api/admin/deals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(deal),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to update deal");
+      }
+
+      const updatedRaw: any = await res.json();
+      const updated: Deal = {
+        ...updatedRaw,
+        owner: typeof updatedRaw.owner === 'object' && updatedRaw.owner
+          ? (updatedRaw.owner.name || updatedRaw.owner.email || '')
+          : (typeof updatedRaw.owner === 'string' ? updatedRaw.owner : ''),
+        ownerId: typeof updatedRaw.owner === 'object' && updatedRaw.owner
+          ? updatedRaw.owner.id
+          : updatedRaw.ownerId,
+      };
+      set({ deals: get().deals.map((d) => (d.id === id ? updated : d)) });
+      get().applyFilters();
+      toast.success("Deal Updated successfully!");
+
+    } catch (err: any) {
+      console.error("updateDeal error:", err);
+      toast.error(err.message);
+      set({ error: err.message });
+    }
+  },
+
+  // ❌ Delete a deal
+  deleteDeal: async (id) => {
+    try {
+      const res = await fetch(`/api/admin/deals/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete deal");
+
+      set({
+        deals: get().deals.filter((d) => d.id !== id),
+      });
+      get().applyFilters();
+      toast.success("Deal deleted successfully!");
+    } catch (err: any) {
+      console.error("deleteDeal error:", err);
+      toast.error(err.message);
+      set({ error: err.message });
+    }
+  },
+
+  // 📊 Export all deals to Excel (use filtered)
+  exportAllDeals: (filename?: string) => {
+    const { filteredDeals } = get();
+    const result = exportDealsToExcel(filteredDeals, filename);
+    if (result.success) {
+      toast.success(`Deals exported successfully!`);
+    } else {
+      toast.error(result.message);
+    }
+  },
+
+  // 📊 Export selected deals to Excel
+  exportSelectedDeals: (dealIds: string[], filename?: string) => {
+    const { deals } = get();
+    const selectedDeals = deals.filter(deal => dealIds.includes(deal.id));
+    if (selectedDeals.length === 0) {
+      toast.error('No deals selected for export');
+      return;
+    }
+    const result = exportDealsToExcel(selectedDeals, filename);
+    if (result.success) {
+      toast.success(`Selected deals exported successfully!`);
+    } else {
+      toast.error(result.message);
+    }
+  },
+
+  // 📊 Export single deal to Excel
+  exportSingleDeal: (dealId: string, filename?: string) => {
+    const { deals } = get();
+    const deal = deals.find(d => d.id === dealId);
+    if (!deal) {
+      toast.error('Deal not found');
+      return;
+    }
+    const result = exportSingleDealToExcel(deal, filename);
+    if (result.success) {
+      toast.success(`Deal ${deal.dealName || 'Unknown'} exported successfully!`);
+    } else {
+      toast.error(result.message);
+    }
+  },
+
+  // 📊 Export deals with custom columns
+  exportDealsWithColumns: (columns: (keyof Deal)[], filename?: string) => {
+    const { deals } = get();
+    const result = exportDealsWithColumns(deals, columns, filename);
+    if (result.success) {
+      toast.success(`Deals exported successfully!`);
+    } else {
+      toast.error(result.message);
+    }
+  },
+
+  // 📥 Import deals from Excel
+  importDealsFromExcel: async (file: File) => {
+    try {
+      const result = await importDealsFromExcel(file);
+      
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      if (!result.data || result.data.length === 0) {
+        toast.error('No valid deal data found in the file');
+        return;
+      }
+
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const dealData of result.data) {
+        try {
+          const dealPayload = {
+            ...dealData,
+            company: dealData.company || 'Unknown Company',
+            contact: dealData.contact || 'Unknown Contact',
+            stage: dealData.stage || 'New',
+            amount: dealData.amount || 0,
+          };
+
+          const res = await fetch('/api/admin/deals', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dealPayload),
+          });
+
+          if (!res.ok) {
+            throw new Error('Failed to create deal');
+          }
+
+          const created: Deal = await res.json();
+          set({ deals: [...get().deals, created] });
+          successCount++;
+        } catch (err: any) {
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`Successfully imported ${successCount} deals!`);
+      }
+      
+      if (errorCount > 0) {
+        toast.error(`Failed to import ${errorCount} deals.`);
+      }
+
+    } catch (err: any) {
+      toast.error('Failed to import deals from Excel file');
+    }
+  },
+
+  // 📥 Download import template
+  downloadImportTemplate: (filename?: string) => {
+    const result = generateDealImportTemplate(filename);
+    if (result.success) {
+      toast.success('Import template downloaded successfully!');
+    } else {
+      toast.error(result.message);
+    }
+  },
+}));
