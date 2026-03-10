@@ -7,6 +7,7 @@ const nextConfig: NextConfig = {
     '.replit.dev',
     '.repl.co',
     '.replit.com',
+    '.z.ai',
   ],
   experimental: {
     // Enable if needed
