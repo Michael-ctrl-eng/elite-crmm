@@ -1,1 +1,1 @@
-export { config, POST } from "@/feature/upload/api/apiUploadFile";
+export { POST } from "@/feature/upload/api/apiUploadFile";
