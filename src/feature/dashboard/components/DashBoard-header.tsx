@@ -30,7 +30,7 @@ export function DashboardHeader({
     onTimePeriodChange?: (value: string) => void;
 }) {
     const [selectedUser, setSelectedUser] = useState("all")
-    const [actionLabel, setActionLabel] = useState("New Deal") // <-- new state
+    const [actionLabel, setActionLabel] = useState("New Deal")
 
     // Handle time period changes
     const handleTimePeriodChange = (value: string) => {
@@ -63,19 +63,15 @@ export function DashboardHeader({
                 useDealModalStore.getState().openModal("add");
                 break
             case "New Task":
-                // TODO: update with the correct route once available
                 useTaskModalStore.getState().openModal("add");
                 break
             case "New Meeting":
-                // TODO: update with the correct route once available
                 useMeetingModalStore.getState().openModal("add");
                 break
             case "New Contact":
-                // TODO: update with the correct route once available
                 useCustomerModalStore.getState().openModal("add");
                 break
             case "New Prospect":
-                // TODO: update with the correct route once available
                 useProspectModelStore.getState().openModal("add");
                 break
             default:
@@ -85,8 +81,8 @@ export function DashboardHeader({
 
     return (
         <header>
-            <div className="flex items-center justify-between h-9">
-                <div className="flex items-center gap-2 w-[556px] h-9">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 sm:h-9">
+                <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <DropDown
                         options={timePeriodOptions}
                         value={selectedTimePeriod}
@@ -97,36 +93,36 @@ export function DashboardHeader({
 
                 {/* New Deal + Arrow */}
                 <div
-                    className="relative flex min-w-[155px] h-9 border border-[var(--border-gray)] rounded-lg bg-white shadow-sm"
+                    className="relative flex min-w-[140px] sm:min-w-[155px] h-9 border border-[var(--border-gray)] rounded-lg bg-white shadow-sm"
                     ref={menuRef}>
                     <button onClick={() => handlePrimaryAction()}
-                            className="flex items-center gap-1.5 justify-center px-4 hover:bg-gray-50 transition-colors whitespace-nowrap">
+                            className="flex items-center gap-1.5 justify-center px-3 sm:px-4 hover:bg-gray-50 transition-colors whitespace-nowrap">
                         <Plus size={16} className="text-[var(--foreground)]"/>
-                        <span className="text-sm text-[var(--foreground)] tracking-[0%]">{actionLabel}</span>
+                        <span className="text-xs sm:text-sm text-[var(--foreground)] tracking-[0%]">{actionLabel}</span>
                     </button>
 
                     <div className="w-px h-full bg-gray-300"></div>
 
                     <button
                         onClick={() => setMenuOpen((prev) => !prev)}
-                        className="px-3 hover:bg-gray-50 rounded-r-lg transition-colors"
+                        className="px-2 sm:px-3 hover:bg-gray-50 rounded-r-lg transition-colors"
                     >
-                        <img src="/icons/Down-Arrow.svg" alt="" className="w-[16px] h-[17px]"/>
+                        <img src="/icons/Down-Arrow.svg" alt="" className="w-[14px] sm:w-[16px] h-[15px] sm:h-[17px]"/>
                     </button>
 
                     {/* Dropdown menu */}
                     {menuOpen && (
                         <div
-                            className="absolute w-[224px] right-0 top-full mt-1 w-40 bg-white border border-gray-200 rounded-lg shadow-md z-20">
+                            className="absolute w-[180px] sm:w-[224px] right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-md z-20">
                             {["New Task", "New Meeting", "New Contact", "New Deal", "New Prospect"]
-                                .filter((item) => item !== actionLabel) // <-- exclude active one
+                                .filter((item) => item !== actionLabel)
                                 .map((item) => (
                                     <button
                                         key={item}
                                         className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
                                         onClick={() => {
-                                            setActionLabel(item) // update label
-                                            setMenuOpen(false)   // close menu
+                                            setActionLabel(item)
+                                            setMenuOpen(false)
                                             handlePrimaryAction(item)
                                         }}
                                     >

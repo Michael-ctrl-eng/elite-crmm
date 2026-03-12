@@ -2,15 +2,22 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { Menu } from "lucide-react";
 import IconButton from "../ui/IconButton";
 import ProfileModal from "./ProfileModal";
+import { useIsMobile } from "@/hooks/use-mobile";
 
-export default function NavBar() {
+interface NavBarProps {
+  onMenuClick?: () => void;
+}
+
+export default function NavBar({ onMenuClick }: NavBarProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const { data: session } = useSession();
+  const isMobile = useIsMobile();
 
   // Get the current page info based on pathname
   const getPageInfo = () => {
@@ -117,37 +124,54 @@ export default function NavBar() {
 
   return (
     <>
-      <header className="flex items-center h-[84px] w-full justify-between px-8 py-4 border-b border-white/20 luxury-glass relative z-40">
-        <div className="flex flex-col w-full h-[52px] gap-[4px]">
-          <h1 className="text-xl font-semibold leading-[28px] text-[var(--foreground)]">{pageInfo.title}</h1>
-          <p className="text-sm leading-[20px] text-[var(--brand-gray)]">{pageInfo.description}</p>
+      <header className="flex items-center h-auto min-h-[70px] md:h-[84px] w-full justify-between px-3 sm:px-4 md:px-8 py-3 md:py-4 border-b border-white/20 luxury-glass relative z-40">
+        <div className="flex items-center gap-2 md:gap-0">
+          {/* Mobile Menu Button */}
+          {isMobile && (
+            <button
+              onClick={onMenuClick}
+              className="p-2 rounded-lg hover:bg-white/40 transition-colors md:hidden"
+              aria-label="Open menu"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          )}
+          
+          <div className="flex flex-col gap-[2px] md:gap-[4px]">
+            <h1 className="text-base md:text-xl font-semibold leading-tight md:leading-[28px] text-[var(--foreground)]">{pageInfo.title}</h1>
+            {!isMobile && (
+              <p className="text-sm leading-[20px] text-[var(--brand-gray)]">{pageInfo.description}</p>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center h-[40px] gap-4">
-          <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+          {/* Notification icons - hidden on very small screens */}
+          <div className="hidden sm:flex items-center gap-2 md:gap-3">
             <IconButton icon={
               <img src="/icons/NotificationIcon.svg"
                 alt="Notification"
-                className="h-6 w-6" />}
+                className="h-5 w-5 md:h-6 md:w-6" />}
             />
             <IconButton icon={
               <img src="/icons/MessageIcon.svg"
                 alt="Message"
-                className="h-6 w-6" />}
+                className="h-5 w-5 md:h-6 md:w-6" />}
             />
           </div>
 
-          <div className="h-[40px] w-px bg-[var(--border-gray)]"></div>
+          <div className="hidden md:block h-[40px] w-px bg-[var(--border-gray)]"></div>
 
-          <div className="flex items-center gap-2 relative" ref={dropdownRef}>
+          <div className="flex items-center gap-1 sm:gap-2 relative" ref={dropdownRef}>
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/40 transition-all duration-300 floating-luxury"
+              className="flex items-center gap-2 md:gap-3 px-2 md:px-3 py-1.5 rounded-xl hover:bg-white/40 transition-all duration-300 floating-luxury"
             >
-              <div className="h-10 w-10 rounded-full bg-black flex items-center justify-center text-white font-bold text-sm shadow-lg border border-white/20">
+              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-black flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-lg border border-white/20">
                 {getUserInitials()}
               </div>
-              <div className="flex flex-col items-start">
+              {/* User name hidden on small screens */}
+              <div className="hidden md:flex flex-col items-start">
                 <span className="text-sm font-bold text-gray-900 leading-tight">
                   {session?.user?.name || 'User'}
                 </span>
@@ -155,16 +179,16 @@ export default function NavBar() {
                   {session?.user?.role || 'User'}
                 </span>
               </div>
-              <img src="/icons/Down-Arrow.svg" alt="Menu" className="h-4 w-4 opacity-50" />
+              <img src="/icons/Down-Arrow.svg" alt="Menu" className="hidden md:block h-4 w-4 opacity-50" />
             </button>
 
             {/* Dropdown Menu */}
             {isDropdownOpen && (
-              <div className="absolute top-full right-0 mt-3 w-56 luxury-glass floating-luxury rounded-2xl shadow-2xl z-50 border border-white/30 overflow-hidden backdrop-blur-2xl">
+              <div className="absolute top-full right-0 mt-2 md:mt-3 w-48 md:w-56 luxury-glass floating-luxury rounded-2xl shadow-2xl z-50 border border-white/30 overflow-hidden backdrop-blur-2xl">
                 <div className="py-2">
                   <button
                     onClick={handleProfileClick}
-                    className="w-full px-5 py-3 text-left text-sm font-bold text-gray-800 hover:bg-white/50 flex items-center gap-3 transition-colors duration-200"
+                    className="w-full px-4 md:px-5 py-2.5 md:py-3 text-left text-sm font-bold text-gray-800 hover:bg-white/50 flex items-center gap-3 transition-colors duration-200"
                   >
                     <div className="w-8 h-8 rounded-lg bg-black/5 flex items-center justify-center">
                       <svg className="w-4 h-4 text-gray-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -176,7 +200,7 @@ export default function NavBar() {
                   <div className="mx-4 my-1 h-px bg-white/20"></div>
                   <button
                     onClick={handleLogout}
-                    className="w-full px-5 py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50/50 flex items-center gap-3 transition-colors duration-200"
+                    className="w-full px-4 md:px-5 py-2.5 md:py-3 text-left text-sm font-bold text-red-600 hover:bg-red-50/50 flex items-center gap-3 transition-colors duration-200"
                   >
                     <div className="w-8 h-8 rounded-lg bg-red-100/50 flex items-center justify-center text-red-600">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

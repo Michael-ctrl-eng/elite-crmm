@@ -32,6 +32,7 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
       setIsOpen((prev) => !prev);
     } else if (route) {
       router.push(route);
+      onClick?.();
     } else if (onClick) {
       onClick();
     }

@@ -6,7 +6,11 @@ import { sidebarItems } from "@/libs/sideBarLinks";
 import { useSession } from "next-auth/react";
 import { isAdmin } from "@/libs/rbac";
 
-export default function SideBar() {
+interface SideBarProps {
+  onNavigate?: () => void;
+}
+
+export default function SideBar({ onNavigate }: SideBarProps) {
   const { data: session } = useSession();
 
   const userName = session?.user?.name || "User";
@@ -55,11 +59,11 @@ export default function SideBar() {
   const filteredItems = filterItems(sidebarItems);
 
   return (
-    <div className="w-[256px] h-[100dvh] flex flex-col luxury-glass border-r border-white/20">
+    <div className="w-full h-full flex flex-col luxury-glass border-r border-white/20">
       {/* Top Logo & Tenant */}
       <div className="p-2 border-b border-white/20">
         <div className="flex w-full p-2 items-center gap-2 floating-luxury cursor-pointer">
-          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg">
+          <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
             <span className="text-white font-bold text-xl italic">E</span>
           </div>
           <div className="flex-1 min-w-0">
@@ -101,12 +105,14 @@ export default function SideBar() {
                 icon={iconNode}
                 label={item.label}
                 route={item.route}
+                onClick={onNavigate}
               >
                 {item.children?.map((child) => (
                   <SidebarItem
                     key={child.label}
                     label={child.label}
                     route={child.route}
+                    onClick={onNavigate}
                   />
                 ))}
               </SidebarItem>
@@ -118,7 +124,7 @@ export default function SideBar() {
       {/* Bottom profile card */}
       <div className="p-2 border-t border-white/20">
         <div className="w-full h-auto p-3 flex items-center space-x-3 luxury-glass rounded-2xl floating-luxury cursor-pointer shadow-sm">
-          <div className="w-10 h-10 bg-black/5 rounded-full flex items-center justify-center border border-white/30 backdrop-blur-md">
+          <div className="w-10 h-10 bg-black/5 rounded-full flex items-center justify-center border border-white/30 backdrop-blur-md flex-shrink-0">
             <span className="text-sm font-bold text-gray-800">
               {userName?.charAt(0)?.toUpperCase() || "U"}
             </span>

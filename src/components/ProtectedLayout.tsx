@@ -11,18 +11,20 @@ import CustomersModel from "@/feature/customers/components/CustomersModel"
 import {useCustomerModalStore} from "@/feature/customers/stores/useCustomersModel"
 import {useMeetingModalStore} from "@/feature/meetings/stores/meetingModelStore"
 import {AddMeetingModal} from "@/feature/meetings/components/AddMeetingModal"
-import {Meeting} from "@/feature/meetings/types/meeting"
 import {useDealModalStore} from "@/feature/deals/stores/dealsModelStore"
 import {useTaskModalStore} from "@/feature/todo/stores/taskModelStore"
 import DealSlideOver from "@/feature/deals/components/DealModal"
 import TodoSlideOver from "@/feature/todo/components/TodoModel"
 import {useProspectModelStore} from "@/feature/prospects/stores/prospectModelStore";
 import ProspectSlideOver from "@/feature/prospects/components/ProspectModel";
+import { useIsMobile } from "@/hooks/use-mobile"
+import { Sheet, SheetContent } from "@/components/ui/sheet"
 
 export default function ProtectedLayout({children}: { children: React.ReactNode }) {
     const {status} = useSession()
     const [isAuthenticated, setIsAuthenticated] = useState(false)
     const [showChildren, setShowChildren] = useState(false)
+    const [sidebarOpen, setSidebarOpen] = useState(false)
     const router = useRouter()
     const {isOpen: isCompanyOpen, closeModal: closeCompanyModal, mode: companyMode} = useCompanyModalStore();
     const {isOpen: isCustomerOpen, closeModal: closeCustomerModal, mode: customerMode} = useCustomerModalStore();
@@ -32,6 +34,7 @@ export default function ProtectedLayout({children}: { children: React.ReactNode 
     const {isOpen: isProspectOpen, closeModal: closePropspectModal, mode: PropspectMode} = useProspectModelStore();
 
     const pathname = usePathname()
+    const isMobile = useIsMobile()
 
 
     useEffect(() => {
@@ -51,6 +54,11 @@ export default function ProtectedLayout({children}: { children: React.ReactNode 
             return () => clearTimeout(timer)
         }
     }, [status, pathname, router])
+
+    // Close sidebar on route change for mobile
+    useEffect(() => {
+        setSidebarOpen(false)
+    }, [pathname])
 
     // Show loading while session is loading OR when unauthenticated on protected route
     if (status === "loading" || (status === "unauthenticated" && pathname !== "/auth" && pathname !== "/verify")) {
@@ -73,11 +81,20 @@ export default function ProtectedLayout({children}: { children: React.ReactNode 
                 isAuthenticated ?
                     <div>
                         <div className="flex h-[100dvh]">
-                            {/* Sidebar */}
-                            <SideBar/>
+                            {/* Mobile Sidebar - Sheet/Drawer */}
+                            {isMobile ? (
+                                <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+                                    <SheetContent side="left" className="p-0 w-[280px] max-w-[85vw]">
+                                        <SideBar onNavigate={() => setSidebarOpen(false)} />
+                                    </SheetContent>
+                                </Sheet>
+                            ) : (
+                                /* Desktop Sidebar */
+                                <SideBar />
+                            )}
                             {/* Main content */}
-                            <div className="flex flex-col flex-1 overflow-x-hidden">
-                                <NavBar/>
+                            <div className="flex flex-col flex-1 overflow-x-hidden min-w-0">
+                                <NavBar onMenuClick={() => setSidebarOpen(true)} />
                                 {showChildren ? (
                                     <div className="overflow-y-auto overflow-x-hidden flex-1 scrollbar-hide">
                                         {children}

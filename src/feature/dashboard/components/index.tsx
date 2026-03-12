@@ -11,18 +11,18 @@ const DashBoard = () => {
   const [selectedTimePeriod, setSelectedTimePeriod] = useState("this-month")
 
   return (
-    <div className='p-6 flex flex-col gap-[16px]'>
+    <div className='p-3 sm:p-4 md:p-6 flex flex-col gap-3 md:gap-4'>
        <DashboardHeader
          selectedTimePeriod={selectedTimePeriod}
          onTimePeriodChange={setSelectedTimePeriod}
        />
           <DashboardMetrics range={selectedTimePeriod}/>
-        <div className='grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-[16px]'>
-          <div className='flex flex-col gap-[16px]'>
+        <div className='grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-[2fr_1fr] gap-3 md:gap-4'>
+          <div className='flex flex-col gap-3 md:gap-4'>
             <PipelineCard range={selectedTimePeriod}/>
             <RecentActivitiesCard/>
           </div>
-          <div className='flex flex-col gap-[16px]'>
+          <div className='flex flex-col gap-3 md:gap-4'>
             <TasksCard/>
             <AgendaCard/>
           </div>

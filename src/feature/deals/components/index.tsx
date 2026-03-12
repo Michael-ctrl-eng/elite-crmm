@@ -149,7 +149,7 @@ const Deals = () => {
           setSelectedDealRows([]);
         }}
       />
-      <div className='py-8 px-6 overflow-x-hidden'>
+      <div className='py-4 md:py-8 px-3 md:px-6 overflow-x-hidden'>
 
         {view === 'table' ? (
           <>
